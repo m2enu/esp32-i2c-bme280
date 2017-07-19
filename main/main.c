@@ -21,8 +21,6 @@ static const char *TAG = "main";
 #define I2C_FREQ                    100000
 #define BME280_I2C_ADDR             BME280_I2C_ADDR_SEC
 
-#define LOG_LOCAL_LEVEL             ESP_LOG_DEBUG
-
 /** <!-- delay_msec {{{1 -->
  * @brief delay function
  * @param msec wait time [msec]
