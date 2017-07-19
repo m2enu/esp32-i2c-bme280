@@ -71,7 +71,7 @@ bool i2c_master_init(i2c_port_t i2c_num,
 int8_t i2c_wr(uint8_t dev_addr,
               uint8_t reg_addr,
               uint8_t *reg_data,
-              uint8_t cnt
+              uint16_t cnt
 ) {
     uint8_t dev_adwr = (dev_addr << 1) | I2C_MASTER_WRITE;
 
@@ -104,7 +104,7 @@ int8_t i2c_wr(uint8_t dev_addr,
 int8_t i2c_rd(uint8_t dev_addr,
               uint8_t reg_addr,
               uint8_t *reg_data,
-              uint8_t cnt
+              uint16_t cnt
 ) {
     uint8_t dev_adwr = (dev_addr << 1) | I2C_MASTER_WRITE;
     uint8_t dev_adrd = (dev_addr << 1) | I2C_MASTER_READ;
