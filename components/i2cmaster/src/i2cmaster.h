@@ -37,6 +37,19 @@ bool i2c_master_init(i2c_port_t i2c_num,
                      bool scl_pullup_en,
                      uint32_t i2c_freq);
 
+/** <!-- i2c_wr {{{1 -->
+ * @brief I2C master write function
+ * @param dev_addr device address (w/o WR/RD flag)
+ * @param reg_addr register address
+ * @param *reg_data register write data
+ * @param cnt write byte count
+ * @param 0:OK, others:NG
+ */
+int8_t i2c_wr(uint8_t dev_addr,
+              uint8_t reg_addr,
+              uint8_t *reg_data,
+              uint8_t cnt);
+
 /** <!-- i2c_rd {{{1 -->
  * @brief I2C master read function
  * @param dev_addr device address (w/o WR/RD flag)

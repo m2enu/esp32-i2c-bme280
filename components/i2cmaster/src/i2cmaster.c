@@ -54,6 +54,7 @@ bool i2c_master_init(i2c_port_t i2c_num,
     ESP_ERROR_CHECK(err);
 
     if (err != ESP_OK) {
+        ESP_LOGE(TAG, "I2C master Initialization Failed: %d", err);
         return true;
     }
     return false;
