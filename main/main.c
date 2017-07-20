@@ -151,17 +151,18 @@ bool BME280_oneshot(struct bme280_dev *dev,
  */
 static void BME280_log(void *args)
 {
+#if DEBUG_LED_BLINK
     int level = 0;
+#endif
     while (true) {
         // get BME280 sensor data by forced mode
         BME280_oneshot(&m_dev, &m_comp_data);
         BME280_show_sensor_data(&m_comp_data);
 
         // blink LED
-#ifdef DEBUG_LED_BLINK
+#if DEBUG_LED_BLINK
         gpio_set_level(GPIO_LED, level);
         level = !level;
-#else
 #endif
 
         delay_msec(300);
