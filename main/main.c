@@ -48,7 +48,7 @@ struct bme280_data m_comp_data; //!< BME280 compensated data pointer
 
 /** <!-- delay_msec {{{1 -->
  * @brief delay function
- * @param msec wait time [msec]
+ * @param[in] msec wait time in milliseconds
  * @return nothing
  */
 void delay_msec(uint32_t msec)
@@ -58,7 +58,7 @@ void delay_msec(uint32_t msec)
 
 /** <!-- BME280_device_init {{{1 -->
  * @brief initialization of BME280 device
- * @param dev BME280 device pointer
+ * @param[in] dev BME280 device pointer
  * @return Result of BME280 device initialization
  * @retval false: OK
  * @retval true: NG
@@ -80,6 +80,7 @@ bool BME280_device_init(struct bme280_dev *dev)
 
 /** <!-- BME280_show_calib_data {{{1 -->
  * @brief debug function: show BME280 calibration datas
+ * @param[in] clb BME280 calibration parameter pointer
  * @return nothing
  */
 void BME280_show_calib_data(struct bme280_calib_data *clb)
@@ -106,7 +107,7 @@ void BME280_show_calib_data(struct bme280_calib_data *clb)
 
 /** <!-- BME280_show_sensor_data {{{1 -->
  * @brief debug function: show BME280 sensor datas
- * @param comp_data BME280 compensated data pointer
+ * @param[in] comp_data BME280 compensated data pointer
  * @return nothing
  */
 void BME280_show_sensor_data(struct bme280_data *comp_data)
@@ -122,8 +123,8 @@ void BME280_show_sensor_data(struct bme280_data *comp_data)
 
 /** <!-- BME280_oneshot {{{1 -->
  * @brief get BME280 data in forced mode
- * @param dev BME280 device pointer
- * @param comp_data BME280 compensated data pointer
+ * @param[in] dev BME280 device pointer
+ * @param[out] comp_data BME280 compensated data pointer
  * @return Result of operation in forced mode
  * @retval false: OK
  * @retval true: NG
