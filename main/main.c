@@ -13,18 +13,18 @@
 static const char *TAG = "main";
 
 // defines {{{1
-// TODO: append parameters into Kconfig.projbuild
-#define I2C_NUM                     I2C_NUM_0
-#define I2C_SDA                     GPIO_NUM_19
-#define I2C_SCL                     GPIO_NUM_18
-#define I2C_FREQ                    100000
-#define GPIO_LED                    GPIO_NUM_4
-#define BME280_I2C_ADDR             BME280_I2C_ADDR_SEC
-#define BME280_OVERSAMPLING_P       BME280_OVERSAMPLING_4X
-#define BME280_OVERSAMPLING_T       BME280_OVERSAMPLING_4X
-#define BME280_OVERSAMPLING_H       BME280_OVERSAMPLING_4X
-#define BME280_WAIT_FORCED          100
-#define DEBUG_LED_BLINK             1
+#define I2C_NUM                     CONFIG_I2C_PORT_NUM
+#define I2C_SDA                     CONFIG_I2C_PORT_SDA
+#define I2C_SCL                     CONFIG_I2C_PORT_SCL
+#define I2C_FREQ                    CONFIG_I2C_FREQ
+#define DEBUG_LED_BLINK             CONFIG_DEBUG_LED_BLINK
+#define GPIO_LED                    CONFIG_GPIO_LED
+
+#define BME280_I2C_ADDR             CONFIG_BME280_I2C_ADDR
+#define BME280_OVERSAMPLING_P       CONFIG_BME280_OSR_P
+#define BME280_OVERSAMPLING_T       CONFIG_BME280_OSR_T
+#define BME280_OVERSAMPLING_H       CONFIG_BME280_OSR_H
+#define BME280_WAIT_FORCED          CONFIG_BME280_WAIT_FORCED
 
 // function declarations {{{1
 void delay_msec(uint32_t msec);

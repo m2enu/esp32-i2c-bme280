@@ -1,0 +1,84 @@
+menu "BME280 Logger Configuration"
+
+config I2C_PORT_NUM
+    int "I2C port number"
+    range 0 1
+    default 0
+    help
+	I2C port number (0 or 1)
+
+config I2C_PORT_SDA
+    int "I2C SDA GPIO number"
+    range 0 34
+    default 19
+    help
+	GPIO number (IOxx) to I2C SDA
+
+config I2C_PORT_SCL
+    int "I2C SCL GPIO number"
+    range 0 34
+    default 18
+    help
+	GPIO number (IOxx) to I2C SCL
+
+config I2C_FREQ
+    int "I2C clock frequency"
+    range 0 1000000
+    default 100000
+    help
+	I2C clock frequency [Hz]
+
+config DEBUG_LED_BLINK
+    int "LED Blink debug flag"
+    range 0 1
+    default 1
+    help
+	if set 1, enable LED blink debug set as GPIO_LED port.
+
+config GPIO_LED
+    int "LED Blink GPIO number"
+    range 0 34
+    default 4
+    help
+	GPIO number (IOxx) to blink on and off.
+
+config BME280_I2C_ADDR
+    hex "BME280 I2C device address"
+    range 0x76 0x77
+    default 0x77
+    help
+	BME280 I2C device address determine with 5:SDO pin
+	SDO=0:0x76(118d), SDO=1:0x77(119d)
+
+config BME280_OSR_P
+    int "BME280 Pressure over sampling rate"
+    range 1 5
+    default 3
+    help
+	Oversampling rate of Pressure sensing.
+	1:X1, 2:X2, 3:X4, 4:X8, 5:X16
+
+config BME280_OSR_T
+    int "BME280 Temperature over sampling rate"
+    range 1 5
+    default 3
+    help
+	Oversampling rate of Temperature sensing.
+	1:X1, 2:X2, 3:X4, 4:X8, 5:X16
+
+config BME280_OSR_H
+    int "BME280 Humidity over sampling rate"
+    range 1 5
+    default 3
+    help
+	Oversampling rate of Humidity sensing.
+	1:X1, 2:X2, 3:X4, 4:X8, 5:X16
+
+config BME280_WAIT_FORCED
+    int "wait time after activate BME280 in forced mode"
+    range 0 500
+    default 100
+    help
+	specify parameter in milliseconds.
+
+endmenu
