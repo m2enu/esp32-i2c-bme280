@@ -66,7 +66,7 @@ bool i2c_master_init(i2c_port_t i2c_num,
  * @param reg_addr register address
  * @param *reg_data register write data
  * @param cnt write byte count
- * @param 0:OK, others:NG
+ * @return 0:OK, others:NG
  */
 int8_t i2c_wr(uint8_t dev_addr,
               uint8_t reg_addr,
@@ -99,7 +99,7 @@ int8_t i2c_wr(uint8_t dev_addr,
  * @param reg_addr register address
  * @param *reg_data register read data
  * @param cnt read byte count
- * @param 0:OK, others:NG
+ * @return 0:OK, others:NG
  */
 int8_t i2c_rd(uint8_t dev_addr,
               uint8_t reg_addr,
