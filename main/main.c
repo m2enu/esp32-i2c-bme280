@@ -76,14 +76,16 @@ void BME280_show_sensor_data(struct bme280_data *comp_data)
 /** <!-- BME280_oneshot {{{1 -->
  * @brief get BME280 data in forced mode
  * @param dev BME280 device pointer
+ * @param comp_data BME280 compensated data pointer
  * @return OK:false, NG:true
  */
-bool BME280_oneshot(struct bme280_dev *dev)
+bool BME280_oneshot(struct bme280_dev *dev,
+                    struct bme280_data *comp_data)
 {
-    int8_t n_try = 5;
+    const int8_t retry = 5;
+    int8_t n_try = retry;
     int8_t ret;
     uint8_t cfg;
-    struct bme280_data comp_data;
 
     /* Continuously get the sensor data */
     while (n_try > 0) {
@@ -99,11 +101,12 @@ bool BME280_oneshot(struct bme280_dev *dev)
 
         // read out sensor datas
         cfg = BME280_PRESS | BME280_HUM | BME280_TEMP;
-        ret = bme280_get_sensor_data(cfg, &comp_data, dev);
-        BME280_show_sensor_data(&comp_data);
+        ret = bme280_get_sensor_data(cfg, comp_data, dev);
         if (ret == BME280_OK) {
             break;
         }
+        ESP_LOGE(TAG, "Error at BME280_oneshot: %d (%d/%d)",
+                 ret, (retry - n_try + 1), retry);
         n_try--;
     }
     return (ret != BME280_OK);
@@ -132,9 +135,11 @@ void app_main(void)
 
     gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
     int level = 0;
+    struct bme280_data comp_data;
     while (true) {
         // get BME280 sensor data by forced mode
-        BME280_oneshot(&dev);
+        BME280_oneshot(&dev, &comp_data);
+        BME280_show_sensor_data(&comp_data);
 
         // blink LED
         gpio_set_level(GPIO_NUM_4, level);
