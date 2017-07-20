@@ -20,6 +20,9 @@ static const char *TAG = "main";
 #define I2C_SCL                     GPIO_NUM_18
 #define I2C_FREQ                    100000
 #define BME280_I2C_ADDR             BME280_I2C_ADDR_SEC
+#define BME280_OVERSAMPLING_P       BME280_OVERSAMPLING_4X
+#define BME280_OVERSAMPLING_T       BME280_OVERSAMPLING_4X
+#define BME280_OVERSAMPLING_H       BME280_OVERSAMPLING_4X
 
 /** <!-- delay_msec {{{1 -->
  * @brief delay function
@@ -55,6 +58,57 @@ void BME280_show_calib_data(struct bme280_calib_data *clb)
     ESP_LOGD(TAG, "dig_H6=%8d", clb->dig_H6);
 }
 
+/** <!-- BME280_show_sensor_data {{{1 -->
+ * @brief debug function: show BME280 sensor datas
+ * @param comp_data BME280 compensated data pointer
+ */
+void BME280_show_sensor_data(struct bme280_data *comp_data)
+{
+#ifdef FLOATING_POINT_REPRESENTATION
+    ESP_LOGD(TAG, "%7.2fdegC  %7.2fPa  %7.2f%%",
+             comp_data->temperature, comp_data->pressure, comp_data->humidity);
+#else
+    ESP_LOGD(TAG, "%ddegC  %dPa  %d%%",
+             comp_data->temperature, comp_data->pressure, comp_data->humidity);
+#endif
+}
+
+/** <!-- BME280_oneshot {{{1 -->
+ * @brief get BME280 data in forced mode
+ * @param dev BME280 device pointer
+ * @return OK:false, NG:true
+ */
+bool BME280_oneshot(struct bme280_dev *dev)
+{
+    int8_t n_try = 5;
+    int8_t ret;
+    uint8_t cfg;
+    struct bme280_data comp_data;
+
+    /* Continuously get the sensor data */
+    while (n_try > 0) {
+        dev->settings.osr_h = BME280_OVERSAMPLING_H;
+        dev->settings.osr_p = BME280_OVERSAMPLING_P;
+        dev->settings.osr_t = BME280_OVERSAMPLING_T;
+
+        // put the device to forced mode
+        cfg = BME280_OSR_PRESS_SEL | BME280_OSR_TEMP_SEL | BME280_OSR_HUM_SEL;
+        ret = bme280_set_sensor_settings(cfg, dev);
+        ret = bme280_set_sensor_mode(BME280_FORCED_MODE, dev);
+        dev->delay_ms(100);
+
+        // read out sensor datas
+        cfg = BME280_PRESS | BME280_HUM | BME280_TEMP;
+        ret = bme280_get_sensor_data(cfg, &comp_data, dev);
+        BME280_show_sensor_data(&comp_data);
+        if (ret == BME280_OK) {
+            break;
+        }
+        n_try--;
+    }
+    return (ret != BME280_OK);
+}
+
 /** <!-- app_main {{{1 -->
  * @brief main function
  */
@@ -79,9 +133,13 @@ void app_main(void)
     gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
     int level = 0;
     while (true) {
+        // get BME280 sensor data by forced mode
+        BME280_oneshot(&dev);
+
+        // blink LED
         gpio_set_level(GPIO_NUM_4, level);
         level = !level;
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        delay_msec(300);
     }
 }
 
