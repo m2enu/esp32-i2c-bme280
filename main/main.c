@@ -1,4 +1,6 @@
 /**
+ * Copyright (C) 2017 m2enu
+ *
  * @file main/main.c
  * @brief Bosch Sensortec BME280 Pressure sensor logger via I2C
  * @author Toru Nakata
@@ -16,21 +18,21 @@
 #include "i2cmaster.h"
 
 // ESP_LOG* TAG
-static const char *TAG = "main";
+static const char *TAG = "main"; //!< ESP_LOGx tag
 
 // defines {{{1
-#define I2C_NUM                     CONFIG_I2C_PORT_NUM
-#define I2C_SDA                     CONFIG_I2C_PORT_SDA
-#define I2C_SCL                     CONFIG_I2C_PORT_SCL
-#define I2C_FREQ                    CONFIG_I2C_FREQ
-#define DEBUG_LED_BLINK             CONFIG_DEBUG_LED_BLINK
-#define GPIO_LED                    CONFIG_GPIO_LED
+#define I2C_NUM                     CONFIG_I2C_PORT_NUM //!< I2C port number
+#define I2C_SDA                     CONFIG_I2C_PORT_SDA //!< GPIO num of I2C_SDA
+#define I2C_SCL                     CONFIG_I2C_PORT_SCL //!< GPIO num of I2C_SCL
+#define I2C_FREQ                    CONFIG_I2C_FREQ //!< I2C frequency
+#define DEBUG_LED_BLINK             CONFIG_DEBUG_LED_BLINK //!< LED blink debug flag
+#define GPIO_LED                    CONFIG_GPIO_LED //!< GPIO num of LED
 
-#define BME280_I2C_ADDR             CONFIG_BME280_I2C_ADDR
-#define BME280_OVERSAMPLING_P       CONFIG_BME280_OSR_P
-#define BME280_OVERSAMPLING_T       CONFIG_BME280_OSR_T
-#define BME280_OVERSAMPLING_H       CONFIG_BME280_OSR_H
-#define BME280_WAIT_FORCED          CONFIG_BME280_WAIT_FORCED
+#define BME280_I2C_ADDR             CONFIG_BME280_I2C_ADDR //!< BME280 device address
+#define BME280_OVERSAMPLING_P       CONFIG_BME280_OSR_P //!< Oversampling rate of Pressure
+#define BME280_OVERSAMPLING_T       CONFIG_BME280_OSR_T //!< Oversampling rate of Temperature
+#define BME280_OVERSAMPLING_H       CONFIG_BME280_OSR_H //!< Oversampling rate of Humidity
+#define BME280_WAIT_FORCED          CONFIG_BME280_WAIT_FORCED //!< wait time after oneshot
 
 // function declarations {{{1
 void delay_msec(uint32_t msec);
@@ -41,12 +43,13 @@ bool BME280_oneshot(struct bme280_dev *dev, struct bme280_data *comp_data);
 static void BME280_log(void *args);
 
 // global members {{{1
-struct bme280_dev m_dev;
-struct bme280_data m_comp_data;
+struct bme280_dev m_dev; //!< BME280 device pointer
+struct bme280_data m_comp_data; //!< BME280 compensated data pointer
 
 /** <!-- delay_msec {{{1 -->
  * @brief delay function
  * @param msec wait time [msec]
+ * @return nothing
  */
 void delay_msec(uint32_t msec)
 {
@@ -56,7 +59,9 @@ void delay_msec(uint32_t msec)
 /** <!-- BME280_device_init {{{1 -->
  * @brief initialization of BME280 device
  * @param dev BME280 device pointer
- * @return OK:false, NG:true
+ * @return Result of BME280 device initialization
+ * @retval false: OK
+ * @retval true: NG
  */
 bool BME280_device_init(struct bme280_dev *dev)
 {
@@ -75,6 +80,7 @@ bool BME280_device_init(struct bme280_dev *dev)
 
 /** <!-- BME280_show_calib_data {{{1 -->
  * @brief debug function: show BME280 calibration datas
+ * @return nothing
  */
 void BME280_show_calib_data(struct bme280_calib_data *clb)
 {
@@ -101,6 +107,7 @@ void BME280_show_calib_data(struct bme280_calib_data *clb)
 /** <!-- BME280_show_sensor_data {{{1 -->
  * @brief debug function: show BME280 sensor datas
  * @param comp_data BME280 compensated data pointer
+ * @return nothing
  */
 void BME280_show_sensor_data(struct bme280_data *comp_data)
 {
@@ -117,7 +124,9 @@ void BME280_show_sensor_data(struct bme280_data *comp_data)
  * @brief get BME280 data in forced mode
  * @param dev BME280 device pointer
  * @param comp_data BME280 compensated data pointer
- * @return OK:false, NG:true
+ * @return Result of operation in forced mode
+ * @retval false: OK
+ * @retval true: NG
  */
 bool BME280_oneshot(struct bme280_dev *dev,
                     struct bme280_data *comp_data)
@@ -154,6 +163,7 @@ bool BME280_oneshot(struct bme280_dev *dev,
 
 /** <!-- BME280_log {{{1 -->
  * @brief BME280 logger loop
+ * @return nothing
  */
 static void BME280_log(void *args)
 {
@@ -177,6 +187,7 @@ static void BME280_log(void *args)
 
 /** <!-- app_main {{{1 -->
  * @brief main function
+ * @return nothing
  */
 void app_main(void)
 {
