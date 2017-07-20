@@ -1,3 +1,9 @@
+/**
+ * @file main/main.c
+ * @brief Bosch Sensortec BME280 Pressure sensor logger via I2C
+ * @author Toru Nakata
+ * @date 2017/07/20
+ */
 #include <stdint.h>
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
