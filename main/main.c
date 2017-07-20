@@ -23,6 +23,7 @@ static const char *TAG = "main";
 #define BME280_OVERSAMPLING_P       BME280_OVERSAMPLING_4X
 #define BME280_OVERSAMPLING_T       BME280_OVERSAMPLING_4X
 #define BME280_OVERSAMPLING_H       BME280_OVERSAMPLING_4X
+#define BME280_WAIT_FORCED          100
 
 /** <!-- delay_msec {{{1 -->
  * @brief delay function
@@ -97,7 +98,7 @@ bool BME280_oneshot(struct bme280_dev *dev,
         cfg = BME280_OSR_PRESS_SEL | BME280_OSR_TEMP_SEL | BME280_OSR_HUM_SEL;
         ret = bme280_set_sensor_settings(cfg, dev);
         ret = bme280_set_sensor_mode(BME280_FORCED_MODE, dev);
-        dev->delay_ms(100);
+        dev->delay_ms(BME280_WAIT_FORCED);
 
         // read out sensor datas
         cfg = BME280_PRESS | BME280_HUM | BME280_TEMP;
