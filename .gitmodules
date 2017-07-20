@@ -1,3 +1,6 @@
 [submodule "components/bme280/src"]
 	path = components/bme280/src
 	url = https://github.com/BoschSensortec/BME280_driver.git
+[submodule "components/i2cmaster/src"]
+	path = components/i2cmaster/src
+	url = https://github.com/m2enu/esp32-i2c-master.git
