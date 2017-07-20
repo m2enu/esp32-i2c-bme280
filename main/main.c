@@ -3,7 +3,7 @@
  *
  * @file main/main.c
  * @brief Bosch Sensortec BME280 Pressure sensor logger via I2C
- * @author Toru Nakata
+ * @author m2enu
  * @date 2017/07/20
  */
 #include <stdint.h>
