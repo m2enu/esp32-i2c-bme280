@@ -18,11 +18,13 @@ static const char *TAG = "main";
 #define I2C_SDA                     GPIO_NUM_19
 #define I2C_SCL                     GPIO_NUM_18
 #define I2C_FREQ                    100000
+#define GPIO_LED                    GPIO_NUM_4
 #define BME280_I2C_ADDR             BME280_I2C_ADDR_SEC
 #define BME280_OVERSAMPLING_P       BME280_OVERSAMPLING_4X
 #define BME280_OVERSAMPLING_T       BME280_OVERSAMPLING_4X
 #define BME280_OVERSAMPLING_H       BME280_OVERSAMPLING_4X
 #define BME280_WAIT_FORCED          100
+#define DEBUG_LED_BLINK             1
 
 // function declarations {{{1
 void delay_msec(uint32_t msec);
@@ -30,6 +32,11 @@ bool BME280_device_init(struct bme280_dev *dev);
 void BME280_show_calib_data(struct bme280_calib_data *clb);
 void BME280_show_sensor_data(struct bme280_data *comp_data);
 bool BME280_oneshot(struct bme280_dev *dev, struct bme280_data *comp_data);
+static void BME280_log(void *args);
+
+// global members {{{1
+struct bme280_dev m_dev;
+struct bme280_data m_comp_data;
 
 /** <!-- delay_msec {{{1 -->
  * @brief delay function
@@ -139,6 +146,28 @@ bool BME280_oneshot(struct bme280_dev *dev,
     return (ret != BME280_OK);
 }
 
+/** <!-- BME280_log {{{1 -->
+ * @brief BME280 logger loop
+ */
+static void BME280_log(void *args)
+{
+    int level = 0;
+    while (true) {
+        // get BME280 sensor data by forced mode
+        BME280_oneshot(&m_dev, &m_comp_data);
+        BME280_show_sensor_data(&m_comp_data);
+
+        // blink LED
+#ifdef DEBUG_LED_BLINK
+        gpio_set_level(GPIO_LED, level);
+        level = !level;
+#else
+#endif
+
+        delay_msec(300);
+    }
+}
+
 /** <!-- app_main {{{1 -->
  * @brief main function
  */
@@ -146,24 +175,12 @@ void app_main(void)
 {
     // initialize I2C master
     i2c_master_init(I2C_NUM, I2C_SDA, I2C_SCL, true, true, I2C_FREQ);
-
     // initialize BME280 device
-    struct bme280_dev dev;
-    BME280_device_init(&dev);
+    BME280_device_init(&m_dev);
+    // initialize GPIO
+    gpio_set_direction(GPIO_LED, GPIO_MODE_OUTPUT);
 
-    gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
-    int level = 0;
-    struct bme280_data comp_data;
-    while (true) {
-        // get BME280 sensor data by forced mode
-        BME280_oneshot(&dev, &comp_data);
-        BME280_show_sensor_data(&comp_data);
-
-        // blink LED
-        gpio_set_level(GPIO_NUM_4, level);
-        level = !level;
-        delay_msec(300);
-    }
+    xTaskCreate(&BME280_log, "BME280_log", 2048, NULL, 5, NULL);
 }
 
 // end of file {{{1
