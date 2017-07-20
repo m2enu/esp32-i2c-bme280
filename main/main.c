@@ -9,11 +9,10 @@
 #include "bme280.h"
 #include "i2cmaster.h"
 
-/*!< @brief ESP_LOG* TAG */
+// ESP_LOG* TAG
 static const char *TAG = "main";
 
-/** <!-- defines {{{1 -->
- */
+// defines {{{1
 // TODO: append parameters into Kconfig.projbuild
 #define I2C_NUM                     I2C_NUM_0
 #define I2C_SDA                     GPIO_NUM_19
@@ -25,6 +24,13 @@ static const char *TAG = "main";
 #define BME280_OVERSAMPLING_H       BME280_OVERSAMPLING_4X
 #define BME280_WAIT_FORCED          100
 
+// function declarations {{{1
+void delay_msec(uint32_t msec);
+bool BME280_device_init(struct bme280_dev *dev);
+void BME280_show_calib_data(struct bme280_calib_data *clb);
+void BME280_show_sensor_data(struct bme280_data *comp_data);
+bool BME280_oneshot(struct bme280_dev *dev, struct bme280_data *comp_data);
+
 /** <!-- delay_msec {{{1 -->
  * @brief delay function
  * @param msec wait time [msec]
@@ -32,6 +38,26 @@ static const char *TAG = "main";
 void delay_msec(uint32_t msec)
 {
     vTaskDelay(msec / portTICK_PERIOD_MS);
+}
+
+/** <!-- BME280_device_init {{{1 -->
+ * @brief initialization of BME280 device
+ * @param dev BME280 device pointer
+ * @return OK:false, NG:true
+ */
+bool BME280_device_init(struct bme280_dev *dev)
+{
+    dev->id = BME280_I2C_ADDR;
+    dev->interface = BME280_I2C_INTF;
+    dev->read = i2c_rd;
+    dev->write = i2c_wr;
+    dev->delay_ms = delay_msec;
+
+    int8_t ret = bme280_init(dev);
+    ESP_LOGD(TAG, "bme280_init return code: %d", ret);
+    ESP_LOGD(TAG, "BMP280 chip_id: 0x%02X", dev->chip_id);
+    BME280_show_calib_data(&dev->calib_data);
+    return (ret != BME280_OK);
 }
 
 /** <!-- BME280_show_calib_data {{{1 -->
@@ -122,17 +148,8 @@ void app_main(void)
     i2c_master_init(I2C_NUM, I2C_SDA, I2C_SCL, true, true, I2C_FREQ);
 
     // initialize BME280 device
-    struct bme280_dev dev = {
-        .id = BME280_I2C_ADDR,
-        .interface = BME280_I2C_INTF,
-        .read = i2c_rd,
-        .write = i2c_wr,
-        .delay_ms = delay_msec
-    };
-    int8_t ret = bme280_init(&dev);
-    ESP_LOGD(TAG, "bme280_init return code: %d", ret);
-    ESP_LOGD(TAG, "BMP280 chip_id: 0x%02X", dev.chip_id);
-    BME280_show_calib_data(&dev.calib_data);
+    struct bme280_dev dev;
+    BME280_device_init(&dev);
 
     gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
     int level = 0;
