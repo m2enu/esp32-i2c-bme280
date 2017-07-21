@@ -112,13 +112,17 @@ void BME280_show_calib_data(struct bme280_calib_data *clb)
  */
 void BME280_show_sensor_data(struct bme280_data *comp_data)
 {
+    double t, p, h;
 #ifdef FLOATING_POINT_REPRESENTATION
-    ESP_LOGD(TAG, "%7.2fdegC  %7.2fPa  %7.2f%%",
-             comp_data->temperature, comp_data->pressure, comp_data->humidity);
+    t = comp_data->temperature;
+    p = comp_data->pressure;
+    h = comp_data->humidity;
 #else
-    ESP_LOGD(TAG, "%ddegC  %dPa  %d%%",
-             comp_data->temperature, comp_data->pressure, comp_data->humidity);
+    t = (double)comp_data->temperature / 100.0;
+    p = (double)comp_data->pressure / 100.0; // datasheet says div. by 256 ?
+    h = (double)comp_data->humidity / 1024.0;
 #endif
+    ESP_LOGD(TAG, "%7.2fdegC  %7.2fPa  %7.2f%%", t, p, h);
 }
 
 /** <!-- BME280_oneshot {{{1 -->
