@@ -33,7 +33,7 @@ static const char *TAG = "main"; //!< ESP_LOGx tag
 #define BME280_OVERSAMPLING_T       CONFIG_BME280_OSR_T //!< Oversampling rate of Temperature
 #define BME280_OVERSAMPLING_H       CONFIG_BME280_OSR_H //!< Oversampling rate of Humidity
 #define BME280_WAIT_FORCED          CONFIG_BME280_WAIT_FORCED //!< wait time after oneshot
-#define BME280_AVERAGE_TIME         10
+#define BME280_AVERAGE_TIME         CONFIG_BME280_AVERAGE_TIME //!< average time of compensated data
 
 /** <!-- bme280_sum_data {{{1 -->
  * @brief sum of BME280 compensated data
@@ -188,13 +188,19 @@ bool BME280_avg_calc(struct bme280_sum_data *sum_data,
     if (nsum == 0) {
         BME280_avg_init(sum_data);
     }
+
     if (nsum < navg) {
         BME280_avg_sum(sum_data, comp_data);
         return true;
     }
-    comp_data->pressure    = (uint32_t)(sum_data->pres / navg);
-    comp_data->temperature = (uint32_t)(sum_data->temp / navg);
-    comp_data->humidity    = (uint32_t)(sum_data->humi / navg);
+    else if (navg == 0) {
+        BME280_avg_sum(sum_data, comp_data);
+    }
+
+    uint32_t n = (navg != 0) ? navg : 1;
+    comp_data->pressure    = (uint32_t)(sum_data->pres / n);
+    comp_data->temperature = (uint32_t)(sum_data->temp / n);
+    comp_data->humidity    = (uint32_t)(sum_data->humi / n);
     return false;
 }
 
