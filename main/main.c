@@ -34,6 +34,7 @@ static const char *TAG = "main"; //!< ESP_LOGx tag
 #define BME280_OVERSAMPLING_H       CONFIG_BME280_OSR_H //!< Oversampling rate of Humidity
 #define BME280_WAIT_FORCED          CONFIG_BME280_WAIT_FORCED //!< wait time after oneshot
 #define BME280_AVERAGE_TIME         CONFIG_BME280_AVERAGE_TIME //!< average time of compensated data
+#define BME280_AVERAGE_START        1 //!< start number of average count
 
 /** <!-- bme280_sum_data {{{1 -->
  * @brief sum of BME280 compensated data
@@ -175,7 +176,7 @@ bool BME280_avg_sum(struct bme280_sum_data *sum_data,
  * @param[in] sum_data sum of BME280 compensated data pointer
  * @param[out] comp_data averaged BME280 compensated data pointer
  * @param[in] navg Average time
- * @param[in] nsum Sum time
+ * @param[in] nsum Sum time (1 start)
  * @return Result of average
  * @retval false: average calculation done
  * @retval true: not yet calculated
@@ -185,22 +186,18 @@ bool BME280_avg_calc(struct bme280_sum_data *sum_data,
                      uint32_t navg,
                      uint32_t nsum)
 {
-    if (nsum == 0) {
+    if (nsum == BME280_AVERAGE_START) {
         BME280_avg_init(sum_data);
     }
 
-    if (nsum < navg) {
+    if (nsum <= navg) {
         BME280_avg_sum(sum_data, comp_data);
-        return true;
-    }
-    else if (navg == 0) {
-        BME280_avg_sum(sum_data, comp_data);
+        if ((nsum != navg) && (navg > 1)) return true;
     }
 
-    uint32_t n = (navg != 0) ? navg : 1;
-    comp_data->pressure    = (uint32_t)(sum_data->pres / n);
-    comp_data->temperature = (uint32_t)(sum_data->temp / n);
-    comp_data->humidity    = (uint32_t)(sum_data->humi / n);
+    comp_data->pressure    = (uint32_t)(sum_data->pres / navg);
+    comp_data->temperature = (uint32_t)(sum_data->temp / navg);
+    comp_data->humidity    = (uint32_t)(sum_data->humi / navg);
     return false;
 }
 
@@ -254,7 +251,7 @@ static void BME280_log(void *args)
 #if DEBUG_LED_BLINK
     int level = 0;
 #endif
-    int8_t ntry = 0;
+    int8_t ntry = BME280_AVERAGE_START;
     bool ret;
     struct bme280_sum_data sum_data;
     while (true) {
@@ -268,7 +265,7 @@ static void BME280_log(void *args)
                 continue;
             }
             else {
-                ntry = 0;
+                ntry = BME280_AVERAGE_START;
                 BME280_show_sensor_data(&m_comp_data);
             }
         }
