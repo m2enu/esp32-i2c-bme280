@@ -33,12 +33,25 @@ static const char *TAG = "main"; //!< ESP_LOGx tag
 #define BME280_OVERSAMPLING_T       CONFIG_BME280_OSR_T //!< Oversampling rate of Temperature
 #define BME280_OVERSAMPLING_H       CONFIG_BME280_OSR_H //!< Oversampling rate of Humidity
 #define BME280_WAIT_FORCED          CONFIG_BME280_WAIT_FORCED //!< wait time after oneshot
+#define BME280_AVERAGE_TIME         10
+
+/** <!-- bme280_sum_data {{{1 -->
+ * @brief sum of BME280 compensated data
+ */
+struct bme280_sum_data {
+    uint64_t pres; //!< averaged compensated pressure
+    uint64_t temp; //!< averaged compensated temperature
+    uint64_t humi; //!< averaged compensated humidity
+};
 
 // function declarations {{{1
 void delay_msec(uint32_t msec);
 bool BME280_device_init(struct bme280_dev *dev);
 void BME280_show_calib_data(struct bme280_calib_data *clb);
 void BME280_show_sensor_data(struct bme280_data *comp_data);
+bool BME280_avg_init(struct bme280_sum_data *sum_data);
+bool BME280_avg_sum(struct bme280_sum_data *sum_data, struct bme280_data *comp_data);
+bool BME280_avg_calc(struct bme280_sum_data *sum_data, struct bme280_data *comp_data, uint32_t navg, uint32_t nsum);
 bool BME280_oneshot(struct bme280_dev *dev, struct bme280_data *comp_data);
 static void BME280_log(void *args);
 
@@ -125,6 +138,66 @@ void BME280_show_sensor_data(struct bme280_data *comp_data)
     ESP_LOGD(TAG, "%7.2fdegC  %7.2fPa  %7.2f%%", t, p, h);
 }
 
+/** <!-- BME280_avg_init {{{1 -->
+ * @brief initialize sum of BME280 compensated data
+ * @param[out] sum_data sum of BME280 compensated data pointer
+ * @return Result of initialization
+ * @retval false: OK
+ * @retval true: NG
+ */
+bool BME280_avg_init(struct bme280_sum_data *sum_data)
+{
+    sum_data->pres = 0;
+    sum_data->temp = 0;
+    sum_data->humi = 0;
+    return false;
+}
+
+/** <!-- BME280_avg_sum {{{1 -->
+ * @brief add comp_data into sum_data to storage sum
+ * @param[out] sum_data sum of BME280 compensated data pointer
+ * @param[in] comp_data oneshot BME280 compensated data
+ * @return Result of sum
+ * @retval false: OK
+ * @retval true: NG
+ */
+bool BME280_avg_sum(struct bme280_sum_data *sum_data,
+                    struct bme280_data *comp_data)
+{
+    sum_data->pres += comp_data->pressure;
+    sum_data->temp += comp_data->temperature;
+    sum_data->humi += comp_data->humidity;
+    return false;
+}
+
+/** <!-- BME280_avg_calc {{{1 -->
+ * @brief calculate average of compensated data
+ * @param[in] sum_data sum of BME280 compensated data pointer
+ * @param[out] comp_data averaged BME280 compensated data pointer
+ * @param[in] navg Average time
+ * @param[in] nsum Sum time
+ * @return Result of average
+ * @retval false: average calculation done
+ * @retval true: not yet calculated
+ */
+bool BME280_avg_calc(struct bme280_sum_data *sum_data,
+                     struct bme280_data *comp_data,
+                     uint32_t navg,
+                     uint32_t nsum)
+{
+    if (nsum == 0) {
+        BME280_avg_init(sum_data);
+    }
+    if (nsum < navg) {
+        BME280_avg_sum(sum_data, comp_data);
+        return true;
+    }
+    comp_data->pressure    = (uint32_t)(sum_data->pres / navg);
+    comp_data->temperature = (uint32_t)(sum_data->temp / navg);
+    comp_data->humidity    = (uint32_t)(sum_data->humi / navg);
+    return false;
+}
+
 /** <!-- BME280_oneshot {{{1 -->
  * @brief get BME280 data in forced mode
  * @param[in] dev BME280 device pointer
@@ -175,10 +248,24 @@ static void BME280_log(void *args)
 #if DEBUG_LED_BLINK
     int level = 0;
 #endif
+    int8_t ntry = 0;
+    bool ret;
+    struct bme280_sum_data sum_data;
     while (true) {
         // get BME280 sensor data by forced mode
-        BME280_oneshot(&m_dev, &m_comp_data);
-        BME280_show_sensor_data(&m_comp_data);
+        ret = BME280_oneshot(&m_dev, &m_comp_data);
+        if (!ret) {
+            ret = BME280_avg_calc(&sum_data, &m_comp_data,
+                                 BME280_AVERAGE_TIME, ntry);
+            if (ret) {
+                ntry++;
+                continue;
+            }
+            else {
+                ntry = 0;
+                BME280_show_sensor_data(&m_comp_data);
+            }
+        }
 
         // blink LED
 #if DEBUG_LED_BLINK
