@@ -87,7 +87,7 @@ bool BME280_device_init(struct bme280_dev *dev)
 
     int8_t ret = bme280_init(dev);
     ESP_LOGD(TAG, "bme280_init return code: %d", ret);
-    ESP_LOGD(TAG, "BMP280 chip_id: 0x%02X", dev->chip_id);
+    ESP_LOGD(TAG, "BME280 chip_id: 0x%02X", dev->chip_id);
     BME280_show_calib_data(&dev->calib_data);
     return (ret != BME280_OK);
 }
