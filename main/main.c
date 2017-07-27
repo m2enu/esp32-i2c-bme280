@@ -136,7 +136,7 @@ void BME280_show_sensor_data(struct bme280_data *comp_data)
     p = (double)comp_data->pressure / 100.0; // datasheet says div. by 256 ?
     h = (double)comp_data->humidity / 1024.0;
 #endif
-    ESP_LOGD(TAG, "%7.2fdegC  %7.2fPa  %7.2f%%", t, p, h);
+    ESP_LOGD(TAG, "%7.2fdegC  %9.2fPa  %7.2f%%", t, p, h);
 }
 
 /** <!-- BME280_avg_init {{{1 -->
