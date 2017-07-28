@@ -89,4 +89,36 @@ config BME280_AVERAGE_TIME
 	Average time of BME280 compensated data.
 	1 means no-average.
 
+config WIFI_SSID
+    string "WiFi SSID"
+    default "myssid"
+    help
+	SSID (network name) for the example to connect to.
+
+config WIFI_PASSWORD
+    string "WiFi Password"
+    default "myssid"
+    help
+	WiFi password (WPA or WPA2) for the example to use.
+	Can be left blank if the network has no security set.
+
+config M2X_ID
+    string "AT&T M2X PRIMARY DEVICE ID"
+    default "mydeviceid"
+    help
+	Your M2X Primary device ID.
+
+config M2X_ENDPOINT
+    string "AT&T M2X PRIMARY ENDPOINT w/o ID"
+    default "myendpoint"
+    help
+	Your M2X Primary endpoint w/o device ID.
+	For example, "devices".
+
+config M2X_KEY
+    string "AT&T M2X PRIMARY KEY"
+    default "mykey"
+    help
+	Your M2X Primary Key.
+
 endmenu

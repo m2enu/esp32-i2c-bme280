@@ -10,15 +10,27 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "esp_wifi.h"
+#include "esp_event_loop.h"
 #include "esp_system.h"
 #include "esp_spi_flash.h"
 #include "esp_log.h"
 #include "driver/gpio.h"
+
 #include "bme280.h"
 #include "i2cmaster.h"
+#include "esp_request.h"
 
-// ESP_LOG* TAG
 static const char *TAG = "main"; //!< ESP_LOGx tag
+
+/* FreeRTOS event group to signal when we are connected & ready to make a request */
+static EventGroupHandle_t wifi_event_group;
+
+/* The event group allows multiple bits for each event,
+   but we only care about one event - are we connected
+   to the AP with an IP? */
+const int CONNECTED_BIT = BIT0;
 
 // defines {{{1
 #define I2C_NUM                     CONFIG_I2C_PORT_NUM //!< I2C port number
@@ -35,6 +47,20 @@ static const char *TAG = "main"; //!< ESP_LOGx tag
 #define BME280_WAIT_FORCED          CONFIG_BME280_WAIT_FORCED //!< wait time after oneshot
 #define BME280_AVERAGE_TIME         CONFIG_BME280_AVERAGE_TIME //!< average time of compensated data
 #define BME280_AVERAGE_START        1 //!< start number of average count
+
+#define WIFI_SSID                   CONFIG_WIFI_SSID //!< WiFi SSID
+#define WIFI_PASS                   CONFIG_WIFI_PASSWORD //!< WiFi PASSWORD
+
+#define M2X_ID                      CONFIG_M2X_ID //!< AT&T M2X PRIMARY DEIVCE ID
+#define M2X_ENDPOINT                CONFIG_M2X_ENDPOINT //!< AT&T M2X PRIMARY ENDPOINT w/o DEVICE ID
+#define M2X_KEY                     "X-M2X-KEY: " CONFIG_M2X_KEY //!< AT&T M2X PRIMARY API KEY
+#define M2X_URL                     "http://api-m2x.att.com/v2/" M2X_ENDPOINT "/" M2X_ID "/update" //!< AT&T M2X URL
+#define M2X_ACCEPT                  "Accept: */*" //!< AT&T M2X Accept
+#define M2X_CONTENT                 "application/json" //!< AT&T M2X Content-type
+#define M2X_TMP                     "\"temperature\": %6.2f" //!< AT&T M2X BME280 temperature data format
+#define M2X_PRS                     "\"pressure\": %9.2f" //!< AT&T M2X BME280 pressure data format
+#define M2X_HUM                     "\"humidity\": %6.2f" //!< AT&T M2X BME280 humidity data format
+#define M2X_VAL                     "{ \"values\": { " M2X_TMP", "M2X_PRS", "M2X_HUM" } }" //!< AT&T M2X send format
 
 /** <!-- bme280_sum_data {{{1 -->
  * @brief sum of BME280 compensated data
@@ -59,6 +85,57 @@ static void BME280_log(void *args);
 // global members {{{1
 struct bme280_dev m_dev; //!< BME280 device pointer
 struct bme280_data m_comp_data; //!< BME280 compensated data pointer
+
+/** <!-- event_handler {{{1 -->
+ * @brief event handler
+ * @param[in] ctx
+ * @param[in] event
+ * @return error code
+ */
+static esp_err_t event_handler(void *ctx, system_event_t *event)
+{
+    switch(event->event_id) {
+    case SYSTEM_EVENT_STA_START:
+        esp_wifi_connect();
+        break;
+    case SYSTEM_EVENT_STA_GOT_IP:
+        xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+        break;
+    case SYSTEM_EVENT_STA_DISCONNECTED:
+        /* This is a workaround as ESP32 WiFi libs don't currently
+           auto-reassociate. */
+        esp_wifi_connect();
+        xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
+        break;
+    default:
+        break;
+    }
+    return ESP_OK;
+}
+
+/** <!-- initialize_wifi {{{1 -->
+ * @brief WiFi Initialization
+ * @return nothing
+ */
+static void initialise_wifi(void)
+{
+    tcpip_adapter_init();
+    wifi_event_group = xEventGroupCreate();
+    ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
+    ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
+    wifi_config_t wifi_config = {
+        .sta = {
+            .ssid = WIFI_SSID,
+            .password = WIFI_PASS,
+        },
+    };
+    ESP_LOGI(TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
+    ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
+    ESP_ERROR_CHECK( esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
+    ESP_ERROR_CHECK( esp_wifi_start() );
+}
 
 /** <!-- delay_msec {{{1 -->
  * @brief delay function
@@ -254,6 +331,16 @@ static void BME280_log(void *args)
     int8_t ntry = BME280_AVERAGE_START;
     bool ret;
     struct bme280_sum_data sum_data;
+    request_t *req;
+    int status;
+    char msg[512];
+    double t, p, h;
+
+    // Connect to Access Point
+    xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
+                        false, true, portMAX_DELAY);
+    ESP_LOGI(TAG, "Connected to AP, freemem=%d",esp_get_free_heap_size());
+
     while (true) {
         // get BME280 sensor data by forced mode
         ret = BME280_oneshot(&m_dev, &m_comp_data);
@@ -270,13 +357,38 @@ static void BME280_log(void *args)
             }
         }
 
-        // blink LED
+        // TODO: create M2X post function
+        // post to M2X
+#ifdef FLOATING_POINT_REPRESENTATION
+        t = m_comp_data.temperature;
+        p = m_comp_data.pressure;
+        h = m_comp_data.humidity;
+#else
+        t = (double)m_comp_data.temperature / 100.0;
+        p = (double)m_comp_data.pressure / 100.0; // datasheet says div. by 256 ?
+        h = (double)m_comp_data.humidity / 1024.0;
+#endif
+        sprintf(msg, M2X_VAL, t, p, h);
+        req = req_new(M2X_URL);
+        req_setopt(req, REQ_SET_HEADER, M2X_ACCEPT);
+        req_setopt(req, REQ_SET_HEADER, M2X_KEY);
+        req_setopt(req, REQ_SET_POSTFIELDS, M2X_CONTENT);
+        req_setopt(req, REQ_SET_DATAFIELDS, msg);
+        status = req_perform(req);
+        req_clean(req);
+        ESP_LOGI(TAG, "Finish request, status=%d, freemem=%d", status, esp_get_free_heap_size());
+
 #if DEBUG_LED_BLINK
+        // blink LED
         gpio_set_level(GPIO_LED, level);
         level = !level;
 #endif
 
-        delay_msec(300);
+        // TODO: WiFi powerdown to save current consumption
+        for (int i=60; i >= 0; i--) {
+            if ((i % 5) == 0) ESP_LOGI(TAG, "Restarting in %d seconds...", i);
+            delay_msec(1000);
+        }
     }
 }
 
@@ -286,6 +398,8 @@ static void BME280_log(void *args)
  */
 void app_main(void)
 {
+    // initialize WiFi
+    initialise_wifi();
     // initialize I2C master
     i2c_master_init(I2C_NUM, I2C_SDA, I2C_SCL, true, true, I2C_FREQ);
     // initialize BME280 device
@@ -293,7 +407,7 @@ void app_main(void)
     // initialize GPIO
     gpio_set_direction(GPIO_LED, GPIO_MODE_OUTPUT);
 
-    xTaskCreate(&BME280_log, "BME280_log", 2048, NULL, 5, NULL);
+    xTaskCreate(&BME280_log, "BME280_log", 8192, NULL, 5, NULL);
 }
 
 // end of file {{{1
