@@ -4,3 +4,6 @@
 [submodule "components/i2cmaster/src"]
 	path = components/i2cmaster/src
 	url = https://github.com/m2enu/esp32-i2c-master.git
+[submodule "components/esp_request"]
+	path = components/esp_request
+	url = https://github.com/tuanpmt/esp-request.git
