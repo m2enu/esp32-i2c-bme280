@@ -16,7 +16,14 @@
 #include "esp_system.h"
 #include "esp_spi_flash.h"
 #include "esp_log.h"
+#include "nvs_flash.h"
 #include "driver/gpio.h"
+
+#include "lwip/err.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include "lwip/netdb.h"
+#include "lwip/dns.h"
 
 #include "bme280.h"
 #include "i2cmaster.h"
@@ -385,9 +392,14 @@ static void BME280_log(void *args)
 #endif
 
         // TODO: WiFi powerdown to save current consumption
-        for (int i=60; i >= 0; i--) {
-            if ((i % 5) == 0) ESP_LOGI(TAG, "Restarting in %d seconds...", i);
-            delay_msec(1000);
+        for (int min=4; min>=0; min--) {
+            for (int sec=60; sec >= 0; sec--) {
+                if ((sec % 5) == 0) {
+                    ESP_LOGI(TAG, "Restarting in %4d seconds...",
+                             (min + 1) * 60 + sec);
+                }
+                delay_msec(1000);
+            }
         }
     }
 }
@@ -398,6 +410,7 @@ static void BME280_log(void *args)
  */
 void app_main(void)
 {
+    nvs_flash_init();
     // initialize WiFi
     initialise_wifi();
     // initialize I2C master
