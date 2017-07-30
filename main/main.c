@@ -8,15 +8,21 @@
  */
 #include <stdint.h>
 #include <stdio.h>
+#include "esp_types.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 #include "freertos/event_groups.h"
 #include "esp_wifi.h"
 #include "esp_event_loop.h"
 #include "esp_system.h"
+#include "esp_deep_sleep.h"
 #include "esp_spi_flash.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
+#include "soc/timer_group_struct.h"
+#include "driver/periph_ctrl.h"
+#include "driver/timer.h"
 #include "driver/gpio.h"
 
 #include "lwip/err.h"
@@ -58,6 +64,7 @@ const int CONNECTED_BIT = BIT0;
 #define WIFI_SSID                   CONFIG_WIFI_SSID //!< WiFi SSID
 #define WIFI_PASS                   CONFIG_WIFI_PASSWORD //!< WiFi PASSWORD
 
+#define M2X_SEC_INTERVAL            CONFIG_M2X_SEC_INTERVAL //!< AT&T M2X post interval time in seconds
 #define M2X_ID                      CONFIG_M2X_ID //!< AT&T M2X PRIMARY DEIVCE ID
 #define M2X_ENDPOINT                CONFIG_M2X_ENDPOINT //!< AT&T M2X PRIMARY ENDPOINT w/o DEVICE ID
 #define M2X_KEY                     "X-M2X-KEY: " CONFIG_M2X_KEY //!< AT&T M2X PRIMARY API KEY
@@ -142,6 +149,31 @@ static void initialise_wifi(void)
     ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK( esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
     ESP_ERROR_CHECK( esp_wifi_start() );
+}
+
+/** <!-- deep_sleep_initialise {{{1 -->
+ * @brief Deep Sleep Initialization
+ * @return nothing
+ */
+static void deep_sleep_initialise(void)
+{
+    ESP_LOGI(TAG, "Setting Deep Sleep ...");
+    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_MAX, ESP_PD_OPTION_OFF);
+}
+
+/** <!-- deep_sleep_start {{{1 -->
+ * @brief Deep Sleep start
+ * @param[in] sec_wakeup time before wakeup in microseconds
+ * @return nothing
+ */
+static void deep_sleep_start(uint64_t sec_wakeup)
+{
+    ESP_LOGI(TAG, "Wakeup after %lldS ...", sec_wakeup);
+    esp_deep_sleep_enable_timer_wakeup(sec_wakeup * 1000 * 1000);
+    esp_deep_sleep_start();
 }
 
 /** <!-- delay_msec {{{1 -->
@@ -391,16 +423,8 @@ static void BME280_log(void *args)
         level = !level;
 #endif
 
-        // TODO: WiFi powerdown to save current consumption
-        for (int min=4; min>=0; min--) {
-            for (int sec=60; sec >= 0; sec--) {
-                if ((sec % 5) == 0) {
-                    ESP_LOGI(TAG, "Restarting in %4d seconds...",
-                             (min + 1) * 60 + sec);
-                }
-                delay_msec(1000);
-            }
-        }
+        // deep sleep to reduce power consumption
+        deep_sleep_start(M2X_SEC_INTERVAL);
     }
 }
 
@@ -419,6 +443,8 @@ void app_main(void)
     BME280_device_init(&m_dev);
     // initialize GPIO
     gpio_set_direction(GPIO_LED, GPIO_MODE_OUTPUT);
+    // initialize Deep Sleep
+    deep_sleep_initialise();
 
     xTaskCreate(&BME280_log, "BME280_log", 8192, NULL, 5, NULL);
 }

@@ -102,6 +102,14 @@ config WIFI_PASSWORD
 	WiFi password (WPA or WPA2) for the example to use.
 	Can be left blank if the network has no security set.
 
+config M2X_SEC_INTERVAL
+    int "AT&T M2X post interval time in seconds"
+    range 5 3600
+    default 300
+    help
+	M2X post interval time in seconds.
+	ESP32 sleeps in this parameter.
+
 config M2X_ID
     string "AT&T M2X PRIMARY DEVICE ID"
     default "mydeviceid"
